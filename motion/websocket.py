@@ -1,13 +1,8 @@
-import asyncio
-import threading
-import time
 from fastapi import FastAPI, WebSocket
 import uvicorn
+import asyncio
 
 app = FastAPI()
-
-# Store received WebSocket data
-received_data = {"message": None, "last_updated": None}
 
 
 @app.websocket("/ws")
@@ -16,61 +11,38 @@ async def websocket_endpoint(websocket: WebSocket):
     while True:
         data = await websocket.receive_text()
         print(f"Received from WebSocket: {data}")
-        received_data["message"] = data
-        received_data["last_updated"] = time.time()
         await websocket.send_text(f"Message received: {data}")
 
 
 @app.get("/health")
 async def health():
-    """Simple endpoint to check if API is running"""
     return {"status": "ok"}
 
 
-@app.get("/status")
-async def status():
-    """Detailed system status with WebSocket data"""
-    uptime = (
-        time.time() - received_data["last_updated"]
-        if received_data["last_updated"]
-        else "N/A"
-    )
-    return {
-        "status": "ok",
-        "last_message": received_data["message"],
-        "last_updated": uptime,
-    }
+class Server:
+    def __init__(self, host="0.0.0.0", port=5000):
+        self.host = host
+        self.port = port
+        self.task = None
+
+    async def startup(self):
+        if self.task is None:
+            config = uvicorn.Config(
+                app, host=self.host, port=self.port, log_level="info", loop="asyncio"
+            )
+            server = uvicorn.Server(config)
+            self.task = asyncio.create_task(server.serve())
+            print("[WebSocket] Server startup")
+
+    async def shutdown(self):
+        if self.task:
+            self.task.cancel()
+            try:
+                await self.task
+            except asyncio.CancelledError:
+                pass
+            self.task = None
+            print("[WebSocket] Server shutdown")
 
 
-# Server shutdown handling
-server = None  # Global reference to Uvicorn server
-
-
-async def start_server():
-    """Start Uvicorn in an asyncio task"""
-    global server
-    config = uvicorn.Config(
-        app, host="0.0.0.0", port=5000, log_level="info", loop="asyncio"
-    )
-    server = uvicorn.Server(config)
-    await server.serve()
-
-
-def run_server():
-    """Run the server in a separate event loop thread"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(start_server())
-
-
-def start_websocket_server():
-    """Start the WebSocket server in a new thread"""
-    server_thread = threading.Thread(target=run_server, daemon=True)
-    server_thread.start()
-
-
-def stop_websocket_server():
-    """Stop the server gracefully"""
-    global server
-    if server:
-        asyncio.run(server.shutdown())  # Properly stop Uvicorn
+# uvicorn motion.websocket:app --host 0.0.0.0 --port 8000 --reload
