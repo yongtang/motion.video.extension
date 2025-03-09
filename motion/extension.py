@@ -25,23 +25,43 @@ class MotionExtension(omni.ext.IExt):
 
     def on_startup(self, ext_id):
         async def f():
+          try:
             while self.running:
                 try:
                     async with websockets.connect(self.server) as ws:
-                        await ws.send("SUB test.subject 1\r\n")
                         while self.running:
                             try:
-                                response = await asyncio.wait_for(ws.recv(), timeout=1.0)
+                                await ws.send("SUB test.subject 1\r\n")
+                                response = await asyncio.wait_for(ws.recv(), timeout=10)
                                 print(
                                     "[MotionExtension] Extension server: {}".format(
                                         response
                                     )
                                 )
+                                head, body = response.split(b"\r\n", 1)
+                                assert body.endswith(b"\r\n")
+                                body = body[:-2]
+
+                                op, sub, sid, count = head.split(b" ", 3)
+                                assert op == b"MSG"
+                                assert sub
+                                assert sid
+                                assert int(count) == len(body)
+
+                                data = json.loads(body)
+                                print("[MotionExtension] Extension server: {}".format(data))
+                                
                             except asyncio.TimeoutError:
                                 pass
+                except asyncio.CancelledError:
+                    raise
                 except Exception as e:
                     print("[MotionExtension] Extension server: {}".format(e))
                     await asyncio.sleep(1)
+          except asyncio.CancelledError:
+            print("[MotionExtension] Extension server cancel")
+          finally:
+            print("[MotionExtension] Extension server exit")
 
         self.running = True
         loop = asyncio.get_event_loop()
@@ -53,13 +73,14 @@ class MotionExtension(omni.ext.IExt):
             if (
                 getattr(self, "server_task")
                 and self.server_task
-                and not self.server_task.done()
             ):
                 self.server_task.cancel()
                 try:
                     await self.server_task
-                except Exception as e:
+                except asyncio.CancelledError:
                     print("[MotionExtension] Extension cancel")
+                except Exception as e:
+                    print("[MotionExtension] Extension exception {}".format(e))
 
         self.running = False
         loop = asyncio.get_event_loop()
