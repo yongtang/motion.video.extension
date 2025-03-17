@@ -157,13 +157,13 @@ class MotionExtension(omni.ext.IExt):
                             # )
                             # self.socket.sendto(buffer.getvalue(), ("127.0.0.1", 6000))
 
-                            # self.socket.sendto(image.tobytes(), ("127.0.0.1", 6000))
+                            self.socket.sendto(image.tobytes(), ("127.0.0.1", 6000))
 
-                            width, height = 128, 128
-                            header = f"P6\n{width} {height}\n255\n".encode()
-                            self.socket.sendto(
-                                header + image.tobytes(), ("127.0.0.1", 6000)
-                            )
+                            # width, height = 128, 128
+                            # header = f"P6\n{width} {height}\n255\n".encode()
+                            # self.socket.sendto(
+                            #     header + image.tobytes(), ("127.0.0.1", 6000)
+                            # )
                     except asyncio.CancelledError:
                         raise
                     except Exception as e:
