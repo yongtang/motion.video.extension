@@ -2,7 +2,7 @@ import omni.ext
 import omni.usd
 import omni.kit.app
 from omni.isaac.sensor import Camera
-import asyncio, toml, os, socket, io
+import asyncio, toml, os, socket, io, atexit
 import numpy as np
 import PIL.Image
 
@@ -13,6 +13,10 @@ class MotionVideoExtension(omni.ext.IExt):
 
         self.config = {
             "camera": None,
+            "container": "motion-video-extension",
+            "image": "ghcr.io/yongtang/gstreamer:latest",
+            "server": "ws://127.0.0.1:7880",
+            "token": None,
         }
 
         try:
@@ -25,6 +29,16 @@ class MotionVideoExtension(omni.ext.IExt):
             print("[MotionVideoExtension] Extension config: {}".format(config))
             self.config["camera"] = (
                 config.get("camera", self.config["camera"]) or self.config["camera"]
+            )
+            self.config["container"] = (
+                config.get("container", self.config["container"])
+                or self.config["container"]
+            )
+            self.config["server"] = (
+                config.get("server", self.config["server"]) or self.config["server"]
+            )
+            self.config["token"] = (
+                config.get("token", self.config["token"]) or self.config["token"]
             )
         except Exception as e:
             print("[MotionVideoExtension] Extension config: {}".format(e))
@@ -87,13 +101,146 @@ class MotionVideoExtension(omni.ext.IExt):
             finally:
                 print("[MotionVideoExtension] Extension camera exit")
 
+        async def g(self):
+            def k(self):
+                print("[MotionVideoExtension] Extension exit start")
+                if getattr(self, "process") and self.process is not None:
+                    try:
+                        print("[MotionVideoExtension] Extension container: kill")
+                        os.killpg(os.getpgid(container_process.pid), signal.SIGTERM)
+                        time.sleep(3)
+                        os.killpg(os.getpgid(container_process.pid), signal.SIGKILL)
+                    except ProcessLookupError:
+                        print("[MotionVideoExtension] Extension container: none")
+                print("[MotionVideoExtension] Extension exit final")
+
+            atexit.register(k, self)
+
+            try:
+                print("[MotionVideoExtension] Extension container remove start")
+                p = [
+                    "rm",
+                    "-f",
+                    self.config["container"],
+                ]
+                print("[MotionVideoExtension] Extension container remove {}".format(p))
+
+                self.process = await asyncio.create_subprocess_exec(
+                    "docker",
+                    *p,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                    preexec_fn=os.setsid,
+                )
+
+                async for line in self.process.stdout:
+                    print(
+                        "[MotionVideoExtension] Extension container: {}".format(
+                            line.decode().strip()
+                        )
+                    )
+
+                await self.process.wait()
+                print("[MotionVideoExtension] Extension container remove final")
+
+                print("[MotionVideoExtension] Extension container launch start")
+                p = [
+                    "run",
+                    "-i",
+                    "-t",
+                    "--rm",
+                    "--net=host",
+                    "--name={}".format(self.config["container"]),
+                    self.config["image"],
+                    "gst-launch-1.0",
+                    "-v",
+                    "udpsrc",
+                    "port=6000",
+                    "address=127.0.0.1",
+                    "!",
+                    "queue",
+                    "max-size-buffers=1",
+                    "max-size-time=0",
+                    "max-size-bytes=0",
+                    "leaky=downstream",
+                    "!",
+                    "video/x-raw,format=RGB,width=128,height=128,framerate=30/1",
+                    "!",
+                    "videoconvert",
+                    "!",
+                    "video/x-raw,format=I420",
+                    "!",
+                    "livekitwebrtcsink",
+                    "signaller::ws-url={}".format(self.config["server"]),
+                    "signaller::auth-token={}".format(self.config["token"]),
+                ]
+                print("[MotionVideoExtension] Extension container launch {}".format(p))
+                self.process = await asyncio.create_subprocess_exec(
+                    "docker",
+                    *p,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                    preexec_fn=os.setsid,
+                )
+
+                async for line in self.process.stdout:
+                    print(
+                        "[MotionVideoExtension] Extension container: {}".format(
+                            line.decode().strip()
+                        )
+                    )
+
+                await self.process.wait()
+                print("[MotionVideoExtension] Extension container launch final")
+            finally:
+                print("[MotionVideoExtension] Extension container finish start")
+                p = [
+                    "rm",
+                    "-f",
+                    self.config["container"],
+                ]
+                print("[MotionVideoExtension] Extension container finish {}".format(p))
+                self.process = await asyncio.create_subprocess_exec(
+                    "docker",
+                    *p,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                    preexec_fn=os.setsid,
+                )
+
+                async for line in self.process.stdout:
+                    print(
+                        "[MotionVideoExtension] Extension container: {}".format(
+                            line.decode().strip()
+                        )
+                    )
+
+                await self.process.wait()
+                print("[MotionVideoExtension] Extension container finish final")
+                self.process = None
+
         self.running = True
         loop = asyncio.get_event_loop()
         loop.run_until_complete(f(self))
         self.camera_task = loop.create_task(v(self)) if self.camera else None
+        self.container_task = loop.create_task(g(self))
         print("[MotionVideoExtension] Extension startup")
 
     def on_shutdown(self):
+        async def g(self):
+            if getattr(self, "container_task") and self.container_task:
+                self.container_task.cancel()
+                try:
+                    await self.container_task
+                except asyncio.CancelledError:
+                    print("[MotionVideoExtension] Extension container cancel")
+                except Exception as e:
+                    print(
+                        "[MotionVideoExtension] Extension container exception {}".format(
+                            e
+                        )
+                    )
+
         async def v(self):
             if getattr(self, "camera_task") and self.camera_task:
                 self.camera_task.cancel()
