@@ -14,6 +14,9 @@ class MotionVideoExtension(omni.ext.IExt):
         self.config = {
             "camera": None,
             "container": "motion-video-extension",
+            "image": "ghcr.io/yongtang/gstreamer:latest",
+            "server": "ws://127.0.0.1:7880",
+            "token": None,
         }
 
         try:
@@ -30,6 +33,12 @@ class MotionVideoExtension(omni.ext.IExt):
             self.config["container"] = (
                 config.get("container", self.config["container"])
                 or self.config["container"]
+            )
+            self.config["server"] = (
+                config.get("server", self.config["server"]) or self.config["server"]
+            )
+            self.config["token"] = (
+                config.get("token", self.config["token"]) or self.config["token"]
             )
         except Exception as e:
             print("[MotionVideoExtension] Extension config: {}".format(e))
@@ -109,12 +118,16 @@ class MotionVideoExtension(omni.ext.IExt):
 
             try:
                 print("[MotionVideoExtension] Extension container remove start")
-
-                self.process = await asyncio.create_subprocess_exec(
+                p = [
                     "docker",
                     "rm",
                     "-f",
                     self.config["container"],
+                ]
+                print("[MotionVideoExtension] Extension container remove {}".format(p))
+
+                self.process = await asyncio.create_subprocess_exec(
+                    p,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                     preexec_fn=os.setsid,
@@ -131,7 +144,7 @@ class MotionVideoExtension(omni.ext.IExt):
                 print("[MotionVideoExtension] Extension container remove final")
 
                 print("[MotionVideoExtension] Extension container launch start")
-                self.process = await asyncio.create_subprocess_exec(
+                p = [
                     "docker",
                     "run",
                     "-i",
@@ -159,11 +172,12 @@ class MotionVideoExtension(omni.ext.IExt):
                     "video/x-raw,format=I420",
                     "!",
                     "livekitwebrtcsink",
-                    "signaller::ws-url=${LIVEKIT_URL}",
-                    "signaller::api-key=devkey",
-                    "signaller::secret-key=secret",
-                    "signaller::room-name=test_room",
-                    "signaller::identity=bot",
+                    "signaller::ws-url={}".format(self.config["server"]),
+                    "signaller::auth-token={}".format(self.config["token"]),
+                ]
+                print("[MotionVideoExtension] Extension container launch {}".format(p))
+                self.process = await asyncio.create_subprocess_exec(
+                    p,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                     preexec_fn=os.setsid,
@@ -180,11 +194,15 @@ class MotionVideoExtension(omni.ext.IExt):
                 print("[MotionVideoExtension] Extension container launch final")
             finally:
                 print("[MotionVideoExtension] Extension container finish start")
-                self.process = await asyncio.create_subprocess_exec(
+                p = [
                     "docker",
                     "rm",
                     "-f",
                     self.config["container"],
+                ]
+                print("[MotionVideoExtension] Extension container finish {}".format(p))
+                self.process = await asyncio.create_subprocess_exec(
+                    p,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                     preexec_fn=os.setsid,
