@@ -190,7 +190,7 @@ class MotionVideoExtension(omni.ext.IExt):
                         )
                     )
 
-                await process.wait()
+                await self.process.wait()
                 print("[MotionVideoExtension] Extension container launch final")
             finally:
                 print("[MotionVideoExtension] Extension container finish start")
