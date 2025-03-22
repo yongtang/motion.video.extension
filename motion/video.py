@@ -107,6 +107,7 @@ class MotionVideoExtension(omni.ext.IExt):
 
             try:
                 print("[MotionVideoExtension] Extension container remove start")
+
                 self.process = await asyncio.create_subprocess_exec(
                     "docker",
                     "rm",
@@ -117,14 +118,14 @@ class MotionVideoExtension(omni.ext.IExt):
                     preexec_fn=os.setsid,
                 )
 
-                async for line in self.process.stdout:
-                    print(
-                        "[MotionVideoExtension] Extension container: {}".format(
-                            line.decode().strip()
-                        )
-                    )
+                stdout, _ = await self.process.communicate()
 
-                await self.process.wait()
+                print(
+                    "[MotionVideoExtension] Extension container: {}".format(
+                        stdout.decode().strip()
+                    )
+                )
+
                 print("[MotionVideoExtension] Extension container remove final")
 
                 self.process = await asyncio.create_subprocess_exec(
