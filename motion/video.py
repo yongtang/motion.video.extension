@@ -94,6 +94,7 @@ class MotionVideoExtension(omni.ext.IExt):
 
         async def g(self):
             def k(self):
+                print("[MotionVideoExtension] Extension exit start")
                 if getattr(self, "process") and self.process is not None:
                     try:
                         print("[MotionVideoExtension] Extension container: kill")
@@ -102,6 +103,7 @@ class MotionVideoExtension(omni.ext.IExt):
                         os.killpg(os.getpgid(container_process.pid), signal.SIGKILL)
                     except ProcessLookupError:
                         print("[MotionVideoExtension] Extension container: none")
+                print("[MotionVideoExtension] Extension exit final")
 
             atexit.register(k, self)
 
