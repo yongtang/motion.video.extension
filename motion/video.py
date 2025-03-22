@@ -2,7 +2,7 @@ import omni.ext
 import omni.usd
 import omni.kit.app
 from omni.isaac.sensor import Camera
-import asyncio, toml, os, socket, io
+import asyncio, toml, os, socket, io, atexit
 import numpy as np
 import PIL.Image
 
