@@ -130,6 +130,7 @@ class MotionVideoExtension(omni.ext.IExt):
                 await self.process.wait()
                 print("[MotionVideoExtension] Extension container remove final")
 
+                print("[MotionVideoExtension] Extension container launch start")
                 self.process = await asyncio.create_subprocess_exec(
                     "docker",
                     "run",
@@ -164,7 +165,7 @@ class MotionVideoExtension(omni.ext.IExt):
                     "signaller::room-name=test_room",
                     "signaller::identity=bot",
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.STDOUT,
+                    stderr=asyncio.subprocess.STDOUT,
                     preexec_fn=os.setsid,
                 )
 
@@ -176,14 +177,17 @@ class MotionVideoExtension(omni.ext.IExt):
                     )
 
                 await process.wait()
+                print("[MotionVideoExtension] Extension container launch final")
             finally:
+                print("[MotionVideoExtension] Extension container finish start")
                 self.process = await asyncio.create_subprocess_exec(
                     "docker",
                     "rm",
                     "-f",
                     self.config["container"],
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.STDOUT,
+                    stderr=asyncio.subprocess.STDOUT,
+                    preexec_fn=os.setsid,
                 )
 
                 async for line in self.process.stdout:
@@ -194,6 +198,7 @@ class MotionVideoExtension(omni.ext.IExt):
                     )
 
                 await self.process.wait()
+                print("[MotionVideoExtension] Extension container finish final")
                 self.process = None
 
         self.running = True
