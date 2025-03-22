@@ -106,7 +106,7 @@ class MotionVideoExtension(omni.ext.IExt):
             atexit.register(k, self)
 
             try:
-                print("[MotionVideoExtension] Extension container: remove")
+                print("[MotionVideoExtension] Extension container remove start")
                 self.process = await asyncio.create_subprocess_exec(
                     "docker",
                     "rm",
@@ -125,6 +125,7 @@ class MotionVideoExtension(omni.ext.IExt):
                     )
 
                 await self.process.wait()
+                print("[MotionVideoExtension] Extension container remove final")
 
                 self.process = await asyncio.create_subprocess_exec(
                     "docker",
