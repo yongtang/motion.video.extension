@@ -119,7 +119,6 @@ class MotionVideoExtension(omni.ext.IExt):
             try:
                 print("[MotionVideoExtension] Extension container remove start")
                 p = [
-                    "docker",
                     "rm",
                     "-f",
                     self.config["container"],
@@ -127,7 +126,8 @@ class MotionVideoExtension(omni.ext.IExt):
                 print("[MotionVideoExtension] Extension container remove {}".format(p))
 
                 self.process = await asyncio.create_subprocess_exec(
-                    p,
+                    "docker",
+                    *p,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                     preexec_fn=os.setsid,
@@ -145,7 +145,6 @@ class MotionVideoExtension(omni.ext.IExt):
 
                 print("[MotionVideoExtension] Extension container launch start")
                 p = [
-                    "docker",
                     "run",
                     "-i",
                     "-t",
@@ -177,7 +176,8 @@ class MotionVideoExtension(omni.ext.IExt):
                 ]
                 print("[MotionVideoExtension] Extension container launch {}".format(p))
                 self.process = await asyncio.create_subprocess_exec(
-                    p,
+                    "docker",
+                    *p,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                     preexec_fn=os.setsid,
@@ -195,14 +195,14 @@ class MotionVideoExtension(omni.ext.IExt):
             finally:
                 print("[MotionVideoExtension] Extension container finish start")
                 p = [
-                    "docker",
                     "rm",
                     "-f",
                     self.config["container"],
                 ]
                 print("[MotionVideoExtension] Extension container finish {}".format(p))
                 self.process = await asyncio.create_subprocess_exec(
-                    p,
+                    "docker",
+                    *p,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                     preexec_fn=os.setsid,
