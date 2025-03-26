@@ -1,4 +1,4 @@
-FROM opensuse/leap
+FROM opensuse/tumbleweed
 
 RUN zypper install -y \
     gstreamer \
